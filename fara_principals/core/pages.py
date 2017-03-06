@@ -1,10 +1,37 @@
+"""
+This module contains abstractions which are useful for describing and
+manipulating what you find on the page when you click `Active Foreign Principals`
+on FARA's home page.
+
+This Active Principal page contains a list of Foreign Principals with 
+partial or incomplete details of an active principal. Clicking on the link
+of a Principal takes you to the details page of the principal where you can
+view it's exhibits.
+
+In this component, the collection of details you find on the list page is
+refered to as a `Partial Principal` because it contains incomplete/partial
+data for the principal (it does not contain it's exhibit information). After
+the principal's exhibit infos has been appended to the details gotten from 
+the list page, it can then be refered to as a `Full Principal` or `Principal`
+for short.
+
+The first list or pagination of principals you see when you navigate to
+the `Active Principals` web page, contains some special information hidden
+in it. This information is needed to navigate from one page to another
+for the user's session. If this set of information is not passed on, the
+web app intelligently detects that it is being scraped, then it returns 
+a 404 not found error message to confuse people who write scrappers. This
+information which can only be gotten from the first list page is refered
+to as the `Page Context` in this core module.
+"""
+
 import copy
 
 import requests
 from scrapy import Selector
 
 from fara_principals.exceptions import (
-    BadPrincipalSchemaError, PageInstanceInfoNotFoundError
+    BadPrincipalSchemaError, PageInstanceInfoNotFoundError, PageError
 )
 
 __main_url__ = \
@@ -12,8 +39,35 @@ __main_url__ = \
 
 __default_page_context__ = {
     "instance_id": None, "flow_id": None, "flow_step_id": None,
-    "worksheet_id": None, "report_id": None
+    "worksheet_id": None, "report_id": None, "page": 1
 }
+
+__default_next_page_form_data__ = {
+    "p_request": "APXWGT",
+    "p_instance": None,
+    "p_flow_id": None,
+    "p_flow_step_id": None,
+    "p_widget_num_return": "15",
+    "p_widget_name": "worksheet",
+    "p_widget_mod": "ACTION",
+    "p_widget_action": "PAGE",
+    "p_widget_action_mod": "pgR_min_row=1max_rows=15rows_fetched=15",
+    "x01": None,
+    "x02":None,
+}
+
+__init_headers__ = {
+   "Accept": "*/*",
+    "Accept-Encoding":"gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.8",
+    "Cache-Control":"no-cache",
+    "Connection": "keep-alive",
+    "Host": "efile.fara.gov",
+    "Origin": "https://efile.fara.gov",
+    "Pragma": "no-cache",
+    "Referer": "https://efile.fara.gov/pls/apex/f?p=171:1:0:::::",
+    "User-Agent" : "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36"
+    }
 
 class PrincipalListPage:
     """
@@ -25,24 +79,36 @@ class PrincipalListPage:
 
     Keyword Args:
         content(str): (optional) content of the page whose structure is to be
-            parsed for principal entries. If this value is None, the 
-            special case for an initial page load will be run.
+            parsed for principal entries.
 
         page_context(dict): (optional) a dict containing contextual info
-            about a page
+            about a page. This contextual info are necessary to navigate
+            from one page to another else, the server detects it's been 
+            scraped which makes it return 404 not found pages thereby
+            confusing it's scrappers.
+
+    Notes: the main (first) page contains the contextual infos in hidden
+    html inputs so, it's not necessary for users to pass this info for 
+    the main page. However, this info is needed for subsequent pages. The 
+    context info can be provided to subsequent pages by calling 
+    `self.get_page_context()`, and then passing it to the constructor of 
+    subsequent pages.
     """
 
     def __init__(self, url, content=None, page_context={}, *args, **kwargs):
         self._url = url
         self._content = content
+        if self._content:
+            self._content = self._content.replace('nbsp;', ' ')
 
-        self._page_context = None
-        self._page_context = page_context or self.get_page_context()
-
+        self._cookies = None
         if self.is_main_page():
             self._build_main_page()
         else:
             self._build_normal_page()
+
+        self._page_context = None
+        self._page_context = page_context or self.get_page_context()
 
     def is_main_page(self):
         """
@@ -126,7 +192,10 @@ class PrincipalListPage:
         Builds the necessary internal structures for the first page since
         the first page has some extra requirements
         """
-        pass
+        init_headers = copy.deepcopy(__init_headers__)
+        init_r = requests.get(__main_url__, headers=init_headers)
+        self._content = init_r.text.replace('nbsp;', ' ')
+        self._cookies = init_r.history[0].cookies.get_dict()
 
     def _build_normal_page(self):
         pass
@@ -139,7 +208,23 @@ class PrincipalListPage:
         Returns:
             dict: next page form data
         """
-        pass
+        form_data = copy.deepcopy(__default_next_page_form_data__)
+        page_context = self.get_page_context()
+
+        page_content_count = 15
+        min_rows = ((page_context["page"] - 1) * page_content_count) + 1
+        max_rows = min_rows + page_content_count -1
+        calculated_action = "pgR_min_row={}max_rows={}rows_fetched={}".format(
+            min_rows, max_rows, page_content_count)
+
+        form_data["p_instance"] = page_context["instance_id"]
+        form_data["p_flow_id"] = page_context["flow_id"]
+        form_data["p_flow_step_id"] = page_context["flow_step_id"]
+        form_data["p_widget_action_mod"] = calculated_action
+        form_data["x01"] = page_context["worksheet_id"]
+        form_data["x02"] = page_context["report_id"]
+
+        return form_data
 
     def next_page_url(self):
         """
@@ -149,98 +234,119 @@ class PrincipalListPage:
             str: the url of the next page to be which would be opened if
             the next button had been clicked in the browser.
         """
-        pass
+        return "https://efile.fara.gov/pls/apex/wwv_flow.show"
 
-    def next_page_cookie(self):
+    def main_page_cookie(self):
         """
         Returns:
             dict: a cookie in form of a dict which will be used to make
             requests for the next page.
-        """
-        pass
-
-    def principals(self):
-        """
-        Returns:
-            list: a list of str urls for pages which Principals can be 
-            scraped from.
-        """
-        pass
-
-
-class ForeignPrincipal:
-
-    def __init_(self, url=None, country=None, state=None, address=None, 
-        reg_number=None, principal_name=None, principal_reg_date=None, 
-        reg_date=None, registrant=None, exhibits=[], partial_data=None, 
-        *args, **kwargs):
-
-        self._dict_info = None
-        if partial_data:
-            self._dict_info = partial_data
-        else:
-            self._dict_info = {
-                "url": url, "country_name": country, "state": state, 
-                "address": address, "reg_number": reg_number, 
-                "principal_name": principal_name, 
-                "principal_reg_date": principal_reg_date, 
-                "reg_date": reg_date, "exhibits": exhibits
-            }
-
-    def validate_data(self):
-        """
-        Confirms that certain keys are present in the dict returned by 
-        `self.to_dict`
 
         Raises:
-            BadPrincipalSchemaError: raised when certain fields(keys) are 
-            unavailable or when required contrains on the schema are not met.
-
-        Note: this method is to be called when it has been populated with 
-        it's exhibit info.
+            PageError: when called on a page which is not the main page
         """
-        pass
+        return self._cookies
 
-    def validate_partial(self):
-        """
-        Confirms that certain keys are present given that this instance 
-        represents a pricipal whose full data has not yet been collected.
-
-        Raises:
-            BadPrincipalSchemaError: raised when certain fields(keys) are 
-            unavailable or when required contrains on the schema are not met.
-        """
-        pass
-
-    def partial_dict(self):
+    def partial_principals(self):
         """
         Returns:
-            dict: a dict representation of the principal without it's
-            exhibit data.
+            list: a list of ForeignPrincipal instances that have been
+            extracted from the current page.
         """
-        pass
+        country_dicts = self._country_dicts()
+        partial_principal_dicts = self._partial_principal_dicts()
+        partial_principals = []
 
-    def is_partial(self):
-        """
-        Returns:
-            bool: True if the principal this instance represents does not
-            yet contain all it's information including it's exibit data.
+        for country_dict in country_dicts:
+            for partial_principal_dict in partial_principal_dicts:
+                if partial_principal_dict["country_page_index"] == \
+                    country_dict["country_page_index"]:
+                    partial_principal_dict["country"] = country_dict["name"]
+                    del partial_principal_dict["country_page_index"]
+                    partial_principals.append(
+                        ForeignPrincipal(partial_dict=partial_principal_dict))
 
-        Note: a principal is usually still partial when it has been 
-        populate from the list page but not from its detail page.
-        """
-        pass
+        return partial_principals
 
-    def to_dict(self):
+    def _country_dicts(self):
         """
-        Returns:
-            dict: a dict representation of the Principal instance
+        returns dict containing country names and thier position index
+        as they appear on the page
         """
-        pass
+        country_table_headers = self._all_country_table_headers()
+        country_dicts = []
+        for country_table_header in country_table_headers:
+            _country_id = country_header.xpath('@id').extract()
+            country_index = int(_country_id[0].rsplit("_", 1)[1])
+            country_name = ''.join(country_header.xpath(
+                './/span[@class="apex_break_headers"]/text()').extract())
+            country_dicts.append(dict(name=country_name, 
+                country_page_index=country_index))
 
-    def to_json(self):
+        return country_dicts
+
+    def _all_country_table_headers(self):
         """
-        Returns:
-            str: a json string representation of the Principal instance
+        returns all <th> containing county names
         """
-        pass
+        page_selector = Selector(text=self._content)
+        return page_selector.xpath(
+            '//th[starts-with(@id, "BREAK_COUNTRY_NAME")]')
+
+    def _partial_principal_dicts(self):
+        """
+        returns dict containing infos like `principal name`, `reg_date`, 
+        etc, this collection of info is named a partial principal because
+        it contains only a subset of all the data needed to create a full
+        foreign principal because it doesn't contain any exhibition info.
+        To make a partial principal a complete principal, it's exhibition 
+        info from the details page of a principal must be added it.
+        """
+        principal_dicts = []
+        principal_table_datas = self._all_principal_td()
+        for principal_table_data in principal_table_datas:
+            country_page_index = principal_table_data.xpath('@headers').\
+                extract()[0].rsplit('_',1)[1]
+
+            link = ''.join(
+                principal_table_data.xpath('.//a/@href').extract())
+
+            principal_name = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "FP_NAME")]/text()').\
+                    extract())
+
+            principal_reg_date = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "FP_REG_DATE")]/text()').\
+                    extract())
+
+            address = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "ADDRESS_1")]/text()').\
+                    extract())
+
+            state = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "STATE")]/text()').extract())
+
+            registrant = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "REGISTRANT_NAME")]/text()').\
+                    extract())
+
+            reg_number = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "REG_NUMBER")]/text()').\
+                    extract())
+
+            reg_date = ''.join(principal_table_data.xpath(
+                '..//td[starts-with(@headers, "REG_DATE")]/text()').\
+                    extract())
+
+            principal_dicts.append(dict(country_page_index=country_page_index,
+                link=link, principal_name=principal_name, 
+                principal_reg_date=principal_reg_date, address=address, 
+                state=state, registrant=registrant, reg_number=reg_number,
+                reg_date=reg_date))
+
+        return principal_dicts
+
+    def _all_principal_td(self):
+        page_selector = Selector(text=self._content)
+        return page_selector.xpath(
+            '//td[starts-with(@headers, "LINK BREAK_COUNTRY_NAME")]')

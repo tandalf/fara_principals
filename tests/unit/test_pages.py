@@ -21,8 +21,9 @@ class TestPrincipalListPage(TestCase):
         with open(os.path.join(get_data_dir(), 'page2.html'), 'r') as f:
             self.normal_page_content_2 = f.read()
             self.page_context_2 = {
-                "instance_id": 1, "flow_id": 171, "flow_step_id": 130,
-                "worksheet_id": 1, "report_id": 1
+                "instance_id": '9488617858409', "flow_id": "171", 
+                "flow_step_id": "130", "worksheet_id": "80340213897823017", 
+                "report_id": "80341508791823021", "page": 2
             }
             self.list_page_2 = PrincipalListPage(self.normal_page_url_2, 
                 content=self.normal_page_content_2, 
@@ -32,8 +33,24 @@ class TestPrincipalListPage(TestCase):
         return {
             "instance_id": '9488617858409', "flow_id": '171', 
             "flow_step_id": '130', "worksheet_id": '80340213897823017', 
-            "report_id": '80341508791823021'
+            "report_id": '80341508791823021', "page": 1
         }
+
+    def _main_page_form_data(self):
+        return {
+            "p_request": "APXWGT",
+            "p_instance": "9488617858409",
+            "p_flow_id": "171",
+            "p_flow_step_id": "130",
+            "p_widget_num_return": "15",
+            "p_widget_name": "worksheet",
+            "p_widget_mod": "ACTION",
+            "p_widget_action": "PAGE",
+            "p_widget_action_mod": "pgR_min_row=1max_rows=15rows_fetched=15",
+            "x01": "80340213897823017",
+            "x02":"80341508791823021",
+        }
+
 
     def _get_main_page_mock(self):
         with open(os.path.join(get_data_dir(), 'init.html'), 'r') as f:
@@ -58,3 +75,15 @@ class TestPrincipalListPage(TestCase):
         main_page_mock = self._get_main_page_mock()
         self.assertEqual(self._main_page_context(), 
             main_page_mock.get_page_context())
+
+    def test_next_page_form_data(self):
+        next_page_form_data = self._main_page_form_data()
+        main_page_mock = self._get_main_page_mock()
+        self.assertEqual(next_page_form_data, 
+            main_page_mock.next_page_form_data())
+
+        #test page 2
+        next_page_form_data["p_widget_action_mod"] = \
+            "pgR_min_row=16max_rows=30rows_fetched=15"
+        self.assertEqual(next_page_form_data, 
+            self.list_page_2.next_page_form_data())

@@ -4,6 +4,7 @@ class FaraException(Exception):
     """
     pass
 
+
 class PrincipalError(FaraException):
     """
     Raised when there is a problem with a principal data
