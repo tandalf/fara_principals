@@ -1,11 +1,19 @@
 import copy
 
 import requests
+from scrapy import Selector
 
-from fara_principals.exceptions import BadPrincipalSchemaError
+from fara_principals.exceptions import (
+    BadPrincipalSchemaError, PageInstanceInfoNotFoundError
+)
 
-__first_url__ = 
+__main_url__ = \
     'https://efile.fara.gov/pls/apex/f?p=171:130:0::NO:RP,130:P130_DATERANGE:N'
+
+__default_page_context__ = {
+    "instance_id": None, "flow_id": None, "flow_step_id": None,
+    "worksheet_id": None, "report_id": None
+}
 
 class PrincipalListPage:
     """
@@ -19,28 +27,101 @@ class PrincipalListPage:
         content(str): (optional) content of the page whose structure is to be
             parsed for principal entries. If this value is None, the 
             special case for an initial page load will be run.
+
+        page_context(dict): (optional) a dict containing contextual info
+            about a page
     """
 
-    def __init__(self, url, content=None, page_details={}, *args, **kwargs):
+    def __init__(self, url, content=None, page_context={}, *args, **kwargs):
         self._url = url
         self._content = content
 
-        self._page_details = page_details
+        self._page_context = None
+        self._page_context = page_context or self.get_page_context()
 
-        if self.is_first_page():
-            self._build_first_page()
+        if self.is_main_page():
+            self._build_main_page()
         else:
             self._build_normal_page()
 
-    def is_first_page(self):
+    def is_main_page(self):
         """
         Returns:
-            bool: True if the url for this page is that of the first 
+            bool: True if the url for this page is that of the main 
             active foreign principal web page.
         """
-        return self._url == __first_url__
+        return self._url == __main_url__
 
-    def _build_first_page(self):
+    def get_page_context(self):
+        """
+        Returns:
+            dict: a dict containing details including the server-tracked
+            page instance id and other server-tracked details which are 
+            necessary to make further requests to the server.
+
+        Raises:
+            PageinstanceInfoNotFoundError: when an important page context
+            variable is not found in the loaded html page.
+        """
+        #print(self._content)
+        if self._page_context:
+            return self._page_context
+
+        context = copy.deepcopy(__default_page_context__)
+        context["instance_id"] = self._page_instance_id()
+        context["flow_id"] = self._page_flow_id()
+        context["flow_step_id"] = self._page_flow_step_id()
+        context["worksheet_id"] = self._page_worksheet_id()
+        context["report_id"] = self._page_report_id()
+        
+        return context
+
+    def _page_instance_id(self):
+        try:
+            instance_id = Selector(text=self._content).\
+                xpath('//input[@name="p_instance"]/@value').extract()[0]
+            return str(instance_id)
+        except Exception:
+            raise PageInstanceInfoNotFoundError("page data {} not found".\
+                format("instance_id"))
+
+    def _page_flow_id(self):
+        try:
+            flow_id = Selector(text=self._content).\
+                xpath('//input[@name="p_flow_id"]/@value').extract()[0]
+            return str(flow_id)
+        except Exception:
+            raise PageInstanceInfoNotFoundError("page data {} not found".\
+                format("flow_id"))
+
+    def _page_flow_step_id(self):
+        try:
+            flow_step_id = Selector(text=self._content).\
+                xpath('//input[@name="p_flow_step_id"]/@value').extract()[0]
+            return str(flow_step_id)
+        except Exception:
+            raise PageInstanceInfoNotFoundError("page data {} not found".\
+                format("flow_step_id"))
+
+    def _page_worksheet_id(self):
+        try:
+            page_selector = Selector(text=self._content)
+            return str(page_selector.xpath(
+                '//input[@id="apexir_WORKSHEET_ID"]/@value').extract()[0])
+        except Exception:
+            raise PageInstanceInfoNotFoundError("page data {} not found".\
+                format("worksheet_id"))
+
+    def _page_report_id(self):
+        try:
+            page_selector = Selector(text=self._content)
+            return str(page_selector.xpath(
+                '//input[@id="apexir_REPORT_ID"]/@value').extract()[0])
+        except Exception:
+            raise PageInstanceInfoNotFoundError("page data {} not found".\
+                format("report_id"))
+
+    def _build_main_page(self):
         """
         Builds the necessary internal structures for the first page since
         the first page has some extra requirements
