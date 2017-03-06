@@ -39,10 +39,18 @@ ROBOTSTXT_OBEY = True
 #TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#   'Accept-Language': 'en',
-#}
+DEFAULT_REQUEST_HEADERS = {
+   "Accept": "*/*",
+    "Accept-Encoding":"gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.8",
+    "Cache-Control":"no-cache",
+    "Connection": "keep-alive",
+    "Host": "efile.fara.gov",
+    "Origin": "https://efile.fara.gov",
+    "Pragma": "no-cache",
+    "Referer": "https://efile.fara.gov/pls/apex/f?p=171:1:0:::::",
+    "User-Agent" : "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36"
+}
 
 # Enable or disable spider middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
