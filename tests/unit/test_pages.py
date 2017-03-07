@@ -5,7 +5,7 @@ import mock
 
 from fara_principals.core.pages import __main_url__, PrincipalListPage
 from fara_principals.exceptions import (
-    BadPrincipalSchemaError, PageInstanceInfoNotFoundError
+    InvalidPrincipalError, PageInstanceInfoNotFoundError
 )
 
 def get_data_dir():

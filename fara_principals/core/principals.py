@@ -1,4 +1,5 @@
 import json
+import copy
 
 from fara_principals.exceptions import (
     InvalidPrincipalError
@@ -20,11 +21,12 @@ class ForeignPrincipal:
                 "address": address, "reg_number": reg_number, 
                 "principal_name": principal_name, 
                 "principal_reg_date": principal_reg_date, 
-                "reg_date": reg_date, "exhibits": exhibits
+                "reg_date": reg_date, "registrant": registrant,
+                "exhibits": exhibits
             }
 
 
-        self._required_keys = ["url", "country_name", "state", "address", 
+        self._required_keys = ["url", "country", "state", "address", 
         "reg_number", "principal_name", "principal_reg_date", "reg_date"]
 
     def validate_data(self):
@@ -55,7 +57,7 @@ class ForeignPrincipal:
             BadPrincipalSchemaError: raised when certain fields(keys) are 
             unavailable or when required contrains on the schema are not met.
         """
-        for key in self._required_keys + ["exhibits"]:
+        for key in self._required_keys:
             try:
                 self.to_dict()[key]
             except KeyError:
@@ -101,7 +103,7 @@ class ForeignPrincipal:
         """
         return json.dumps(self.to_dict())
 
-    def add_exhibit_dict(self, exibit):
+    def add_exhibit_dict(self, exhibit):
         """
         Args:
             exhibit(dict): dict containing exhibit info

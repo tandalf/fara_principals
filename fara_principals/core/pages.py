@@ -32,7 +32,7 @@ from scrapy import Selector
 
 from fara_principals.core.principals import ForeignPrincipal
 from fara_principals.exceptions import (
-    BadPrincipalSchemaError, PageInstanceInfoNotFoundError, PageError
+    InvalidPrincipalError, PageInstanceInfoNotFoundError, PageError
 )
 
 #url to the first/main list page which contains the first set of paginated
@@ -268,7 +268,7 @@ class PrincipalListPage:
 
                 if self._country_owns_principal(country_dict, 
                 partial_principal_dict):
-                
+
                     partial_principal_dict["country"] = country_dict["name"]
                     #copy to prevent KeyError on the dict on next iteration
                     p_dict = copy.deepcopy(partial_principal_dict)
