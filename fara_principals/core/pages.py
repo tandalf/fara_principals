@@ -30,18 +30,23 @@ import copy
 import requests
 from scrapy import Selector
 
+from fara_principals.core.principals import ForeignPrincipal
 from fara_principals.exceptions import (
     BadPrincipalSchemaError, PageInstanceInfoNotFoundError, PageError
 )
 
+#url to the first/main list page which contains the first set of paginated
+#principals
 __main_url__ = \
     'https://efile.fara.gov/pls/apex/f?p=171:130:0::NO:RP,130:P130_DATERANGE:N'
 
+#default template for a page's contextual information
 __default_page_context__ = {
     "instance_id": None, "flow_id": None, "flow_step_id": None,
     "worksheet_id": None, "report_id": None, "page": 1
 }
 
+#default template of form date which will be used to request for the next page
 __default_next_page_form_data__ = {
     "p_request": "APXWGT",
     "p_instance": None,
@@ -56,6 +61,7 @@ __default_next_page_form_data__ = {
     "x02":None,
 }
 
+#initial safe headers that wont flag users as a scraper
 __init_headers__ = {
    "Accept": "*/*",
     "Accept-Encoding":"gzip, deflate, br",
@@ -99,7 +105,7 @@ class PrincipalListPage:
         self._url = url
         self._content = content
         if self._content:
-            self._content = self._content.replace('nbsp;', ' ')
+            self._content = self._content.replace('&nbsp;', ' ')
 
         self._cookies = None
         if self.is_main_page():
@@ -194,7 +200,7 @@ class PrincipalListPage:
         """
         init_headers = copy.deepcopy(__init_headers__)
         init_r = requests.get(__main_url__, headers=init_headers)
-        self._content = init_r.text.replace('nbsp;', ' ')
+        self._content = init_r.text.replace('&nbsp;', ' ')
         self._cookies = init_r.history[0].cookies.get_dict()
 
     def _build_normal_page(self):
@@ -259,14 +265,26 @@ class PrincipalListPage:
 
         for country_dict in country_dicts:
             for partial_principal_dict in partial_principal_dicts:
-                if partial_principal_dict["country_page_index"] == \
-                    country_dict["country_page_index"]:
+
+                if self._country_owns_principal(country_dict, 
+                partial_principal_dict):
+                
                     partial_principal_dict["country"] = country_dict["name"]
-                    del partial_principal_dict["country_page_index"]
+                    #copy to prevent KeyError on the dict on next iteration
+                    p_dict = copy.deepcopy(partial_principal_dict)
+                    self._discard_unwanted_fields(p_dict)
                     partial_principals.append(
-                        ForeignPrincipal(partial_dict=partial_principal_dict))
+                        ForeignPrincipal(partial_dict=p_dict))
 
         return partial_principals
+
+    def _country_owns_principal(self, country_dict, principal_dict):
+        return country_dict["country_page_index"] == \
+            principal_dict["country_page_index"]
+
+    def _discard_unwanted_fields(self, principal_dict):
+        del principal_dict["country_page_index"]
+        return principal_dict
 
     def _country_dicts(self):
         """
@@ -276,9 +294,9 @@ class PrincipalListPage:
         country_table_headers = self._all_country_table_headers()
         country_dicts = []
         for country_table_header in country_table_headers:
-            _country_id = country_header.xpath('@id').extract()
+            _country_id = country_table_header.xpath('@id').extract()
             country_index = int(_country_id[0].rsplit("_", 1)[1])
-            country_name = ''.join(country_header.xpath(
+            country_name = ''.join(country_table_header.xpath(
                 './/span[@class="apex_break_headers"]/text()').extract())
             country_dicts.append(dict(name=country_name, 
                 country_page_index=country_index))
@@ -305,8 +323,8 @@ class PrincipalListPage:
         principal_dicts = []
         principal_table_datas = self._all_principal_td()
         for principal_table_data in principal_table_datas:
-            country_page_index = principal_table_data.xpath('@headers').\
-                extract()[0].rsplit('_',1)[1]
+            country_page_index = int(principal_table_data.xpath('@headers').\
+                extract()[0].rsplit('_',1)[1])
 
             link = ''.join(
                 principal_table_data.xpath('.//a/@href').extract())

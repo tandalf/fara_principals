@@ -16,8 +16,31 @@ print(get_data_dir())
 class TestPrincipalListPage(TestCase):
 
     def setUp(self):
+        self.page2_principal_reg_nums = [
+            "6065", "5926", "2244", "2310", "5483", "5839", "3712", "6336", 
+            "5430", "1995", "1995", "5299", "5712", "5712", "5840"
+        ]
+        self.page2_principal_names = [
+            "SOCAR USA, subsidiary of State Oil Company of Azerbaijan Republic (SOCAR)",
+            "Embassy of the Republic of Azerbaijan", 
+            "Government of the Commonwealth of The Bahamas",
+            "Bahamas Ministry of Tourism",
+            "Kingdom of Bahrain, Embassy",
+            "Ministry of Foreign Affairs Kingdom of Bahrain",
+            "Kingdom of Bahrain",
+            "Organization for Peace and Justice through Cassidy and Associates",
+            "Government of the People's Republic of Bangladesh, Embassy",
+            "Barbados Industrial Development Corporation",
+            "Barbados Tourist Board",
+            "Invest Barbados",
+            "Open Joint Stock Company Belarusian Potash Company (OJSC BPC)",
+            "Open Joint Stock Company Belaruskali (OJSC Belaruskali)",
+            "Flanders Tourism Board"
+        ]
+        self.next_page_url = 'https://efile.fara.gov/pls/apex/wwv_flow.show'
         self.normal_page_url_2 = \
             'https://efile.fara.gov/pls/apex/wwv_flow.show'
+        self.principals_count_2 = 15
         with open(os.path.join(get_data_dir(), 'page2.html'), 'r') as f:
             self.normal_page_content_2 = f.read()
             self.page_context_2 = {
@@ -87,3 +110,20 @@ class TestPrincipalListPage(TestCase):
             "pgR_min_row=16max_rows=30rows_fetched=15"
         self.assertEqual(next_page_form_data, 
             self.list_page_2.next_page_form_data())
+
+    def test_next_page_url(self):
+        self.assertEqual(self.next_page_url, self.list_page_2.next_page_url())
+
+    def test_correct_number_of_partial_principals(self):
+        self.assertEqual(self.principals_count_2, 
+            len(self.list_page_2.partial_principals()))
+
+    def test_correct_principal_reg_numbers_in_page(self):
+        for principal in self.list_page_2.partial_principals():
+            self.assertIn(principal.to_dict()["reg_number"], 
+                self.page2_principal_reg_nums)
+
+    def test_correct_principal_names_in_page(self):
+        for principal in self.list_page_2.partial_principals():
+            self.assertIn(principal.to_dict()["principal_name"], 
+                self.page2_principal_names)

@@ -11,7 +11,7 @@ class PrincipalError(FaraException):
     """
     pass
 
-class BadPrincipalSchemaError(PrincipalError):
+class InvalidPrincipalError(PrincipalError):
     """
     Raise when the schema for a principal does not contain certain required
     fields.

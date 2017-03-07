@@ -1,25 +1,31 @@
+import json
+
 from fara_principals.exceptions import (
-    BadPrincipalSchemaError
+    InvalidPrincipalError
 )
 
 class ForeignPrincipal:
 
-    def __init_(self, url=None, country=None, state=None, address=None, 
+    def __init__(self, url=None, country=None, state=None, address=None, 
         reg_number=None, principal_name=None, principal_reg_date=None, 
-        reg_date=None, registrant=None, exhibits=[], partial_data=None, 
+        reg_date=None, registrant=None, exhibits=[], partial_dict=None, 
         *args, **kwargs):
 
         self._dict_info = None
-        if partial_data:
-            self._dict_info = partial_data
+        if partial_dict:
+            self._dict_info = partial_dict
         else:
             self._dict_info = {
-                "url": url, "country_name": country, "state": state, 
+                "url": url, "country": country, "state": state, 
                 "address": address, "reg_number": reg_number, 
                 "principal_name": principal_name, 
                 "principal_reg_date": principal_reg_date, 
                 "reg_date": reg_date, "exhibits": exhibits
             }
+
+
+        self._required_keys = ["url", "country_name", "state", "address", 
+        "reg_number", "principal_name", "principal_reg_date", "reg_date"]
 
     def validate_data(self):
         """
@@ -27,13 +33,18 @@ class ForeignPrincipal:
         `self.to_dict`
 
         Raises:
-            BadPrincipalSchemaError: raised when certain fields(keys) are 
+            InvalidPrincipalError: raised when certain fields(keys) are 
             unavailable or when required contrains on the schema are not met.
 
         Note: this method is to be called when it has been populated with 
         it's exhibit info.
         """
-        pass
+        self.validate_partial()
+        key = "exhibit"
+        try:
+            self.to_dict()[key]
+        except KeyError:
+            raise InvalidPrincipalError("key `{}` not present".format(key))
 
     def validate_partial(self):
         """
@@ -44,15 +55,26 @@ class ForeignPrincipal:
             BadPrincipalSchemaError: raised when certain fields(keys) are 
             unavailable or when required contrains on the schema are not met.
         """
-        pass
+        for key in self._required_keys + ["exhibits"]:
+            try:
+                self.to_dict()[key]
+            except KeyError:
+                raise InvalidPrincipalError(
+                    "key `{}` not present".format(key))
 
-    def partial_dict(self):
-        """
-        Returns:
-            dict: a dict representation of the principal without it's
-            exhibit data.
-        """
-        pass
+        #todo: create more flexible implementation for this
+        if not self.to_dict()["principal_name"]:
+            raise InvalidPrincipalError(
+                "required field `{}` is empty".format("principal_name"))
+        if not self.to_dict()["reg_number"]:
+            raise InvalidPrincipalError(
+                "required field `{}` is empty".format("reg_number"))
+        if not self.to_dict()["country"]:
+            raise InvalidPrincipalError(
+                "required field `{}` is empty".format("country"))
+        if not self.to_dict()["principal_reg_date"]:
+            raise InvalidPrincipalError(
+                "required field `{}` is empty".format("principal_reg_date"))
 
     def is_partial(self):
         """
@@ -63,25 +85,28 @@ class ForeignPrincipal:
         Note: a principal is usually still partial when it has been 
         populate from the list page but not from its detail page.
         """
-        pass
+        return self.to_dict().get("exhibit") == None
 
     def to_dict(self):
         """
         Returns:
             dict: a dict representation of the Principal instance
         """
-        pass
+        return copy.deepcopy(self._dict_info)
 
     def to_json(self):
         """
         Returns:
             str: a json string representation of the Principal instance
         """
-        pass
+        return json.dumps(self.to_dict())
 
     def add_exhibit_dict(self, exibit):
         """
         Args:
             exhibit(dict): dict containing exhibit info
         """
-        pass
+        if not self._dict_info.get("exhibit"):
+            self._dict_info["exhibit"] = [exhibit]
+        else:
+            self._dict_info["exhibit"].append(exhibit)
