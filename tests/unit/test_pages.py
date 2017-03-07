@@ -11,8 +11,6 @@ from fara_principals.exceptions import (
 def get_data_dir():
     return os.path.normpath(os.path.join(__file__, '../../'))
 
-print(get_data_dir())
-
 class TestPrincipalListPage(TestCase):
 
     def setUp(self):
