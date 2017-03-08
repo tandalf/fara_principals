@@ -3,7 +3,9 @@ from unittest import TestCase
 
 import mock
 
-from fara_principals.core.pages import __main_url__, PrincipalListPage
+from fara_principals.core.pages import (
+    __main_url__, PrincipalListPage, ExhibitPage
+)
 from fara_principals.exceptions import (
     InvalidPrincipalError, PageInstanceInfoNotFoundError
 )
@@ -125,3 +127,30 @@ class TestPrincipalListPage(TestCase):
         for principal in self.list_page_2.partial_principals():
             self.assertIn(principal.to_dict()["principal_name"], 
                 self.page2_principal_names)
+
+
+class TestExhibitPage(TestCase):
+
+    def setUp(self):
+        self.exhibit2_dates = [
+            "05/25/2007", "03/03/1993"
+        ]
+        self.exhibit2_doc_urls = [
+            "http://www.fara.gov/docs/4776-Exhibit-AB-20070525-9.pdf",
+            "http://www.fara.gov/docs/4776-Exhibit-AB-19930303-D1Y2IS02.pdf"
+        ]
+        with open(os.path.join(get_data_dir(), 'exhibit_page1.html'), 'r') as f:
+            self.exhibit_page = ExhibitPage(f.read())
+
+    def test_page_contain_right_amount_of_exhibit(self):
+        self.assertEqual(2, len(self.exhibit_page.exhibits()))
+
+    def test_page_contains_right_dates(self):
+        for exhibit in self.exhibit_page.exhibits():
+            self.assertIn(exhibit.to_dict()["date_stamped"], 
+                self.exhibit2_dates)
+
+    def test_page_contains_right_urls(self):
+        for exhibit in self.exhibit_page.exhibits():
+            self.assertIn(exhibit.to_dict()["document_link"], 
+                self.exhibit2_doc_urls)
