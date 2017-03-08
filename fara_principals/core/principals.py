@@ -2,7 +2,7 @@ import json
 import copy
 
 from fara_principals.exceptions import (
-    InvalidPrincipalError
+    InvalidPrincipalError, InvalidExhibitError
 )
 
 class ForeignPrincipal:
@@ -112,3 +112,27 @@ class ForeignPrincipal:
             self._dict_info["exhibit"] = [exhibit]
         else:
             self._dict_info["exhibit"].append(exhibit)
+
+class Exhibit:
+    """
+    Exhibit class which provides validation utillities for exhibit data
+    for a Principal
+    """
+    def __init__(self, exhibit_dict, *args, **kwargs):
+        self._exhibit_dict = exhibit_dict
+
+    def to_dict(self):
+        return self._exhibit_dict
+
+    def validate(self):
+        required_exhibit_fields = [
+            "date_stamped", "document_link", "reg_number", "registrant",
+            "document_type"
+        ]
+
+        for key in required_exhibit_fields:
+            try:
+                self._exhibit_dict[key]
+            except KeyError:
+                raise InvalidExhibitError(
+                    "key `{}` not found in exhibit".format(key))
