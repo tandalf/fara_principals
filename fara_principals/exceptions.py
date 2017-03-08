@@ -18,6 +18,13 @@ class InvalidPrincipalError(PrincipalError):
     """
     pass
 
+class InvalidExhibitError(PrincipalError):
+    """
+    Raise when the schema for an Exhibit does not contain certain required
+    fields.
+    """
+    pass
+
 class PageError(FaraException):
     """
     Raised when an error which relates to a page is encountered e.g, when

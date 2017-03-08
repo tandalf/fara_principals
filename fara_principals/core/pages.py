@@ -30,9 +30,10 @@ import copy
 import requests
 from scrapy import Selector
 
-from fara_principals.core.principals import ForeignPrincipal
+from fara_principals.core.principals import ForeignPrincipal, Exhibit
 from fara_principals.exceptions import (
-    InvalidPrincipalError, PageInstanceInfoNotFoundError, PageError
+    InvalidPrincipalError, PageInstanceInfoNotFoundError, PageError,
+    InvalidExhibitError
 )
 
 #url to the first/main list page which contains the first set of paginated
@@ -368,3 +369,42 @@ class PrincipalListPage:
         page_selector = Selector(text=self._content)
         return page_selector.xpath(
             '//td[starts-with(@headers, "LINK BREAK_COUNTRY_NAME")]')
+
+class ExhibitPage:
+
+    def __init__(self, content, *args, **kwargs):
+        self._content = content
+
+    def exhibits(self):
+        exhibits = []
+        exhibit_dicts = self._all_exhibit_dicts()
+        for exhibit_dict in exhibit_dicts:
+            exhibits.append(Exhibit(exhibit_dict=exhibit_dict))
+
+        return exhibits
+
+    def _all_exhibit_dicts(self):
+        exhibit_selectors = self._all_exhibit_rows()
+        exhibit_dicts = []
+        for selector in exhibit_selectors:
+            date_stamped = ''.join(selector.xpath(
+                './/td[@headers="DATE_STAMPED"]/text()').extract())
+            document_link = ''.join(selector.xpath(
+                './/td[@headers="DOCLINK"]/a/@href').extract())
+            reg_number = ''.join(selector.xpath(
+                './/td[@headers="REGISTRATION_NUMBER"]/text()').extract())
+            registrant = ''.join(selector.xpath(
+                './/td[@headers="REGISTRANT_NAME"]/text()').extract())
+            document_type = ''.join(selector.xpath(
+                './/td[@headers="DOCUMENT_TYPE"]/text()').extract())
+
+            exhibit_dicts.append(dict(date_stamped=date_stamped, 
+                document_link=document_link, reg_number=reg_number,
+                registrant=registrant, document_type=document_type))
+
+        return exhibit_dicts
+
+    def _all_exhibit_rows(self):
+        return Selector(text=self._content).xpath(
+            '//table[@class="apexir_WORKSHEET_DATA"]/tr[@class="even"] | ' + \
+            '//table[@class="apexir_WORKSHEET_DATA"]/tr[@class="odd"]')
