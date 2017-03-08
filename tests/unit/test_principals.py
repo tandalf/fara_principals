@@ -1,8 +1,8 @@
 from unittest import TestCase
 
-from fara_principals.core.principals import ForeignPrincipal
+from fara_principals.core.principals import ForeignPrincipal, Exhibit
 from fara_principals.exceptions import (
-    InvalidPrincipalError
+    InvalidPrincipalError, InvalidExhibitError
 )
 
 partial_principal = {
@@ -62,3 +62,27 @@ class TestPrincipal(TestCase):
             self.fail(
                 "validate_partial() unexpectedly raised InvalidPrincipalError:{}"\
                 .format(e))
+
+class TestExhibit(TestCase):
+
+    def setUp(self):
+        self.exhibit = Exhibit({"date_stamped": '1/2/2013', 
+            "document_link": 'http://a.b.c/?d=e', "reg_number": '0419', 
+            "registrant": 'Mena vip', "document_type": 'Exhibit AB'})
+
+    def test_validate_raises_exception_on_invalid_exhibit(self):
+        invalid_exhibit = Exhibit({})
+        with self.assertRaises(InvalidExhibitError):
+            invalid_exhibit.validate()
+
+        invalid_exhibit = Exhibit({"document_link": ""})
+        with self.assertRaises(InvalidExhibitError):
+            invalid_exhibit.validate()
+
+    def test_validate_does_not_raise_on_valid_exhibit(self):
+        try:
+            self.exhibit.validate()
+        except InvalidExhibitError as e:
+            self.fail(
+                'exhibit.validate unexpectedly raised exception on valid exhibit:{}'.\
+                format(e))
