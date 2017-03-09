@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'fara_principals',
   packages = ['fara_principals'], 
-  version = '0.0.5',
+  version = '0.0.6',
   description = 'A web scraper designed to collect Foreign Principal' +\
       ' information from fara.gov',
   author = 'Timothy Ebiuwhe',
