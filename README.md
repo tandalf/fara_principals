@@ -36,6 +36,11 @@ directory, enter the following commands:
     coverage run --source=fara_principals.core -m unittest discover tests/unit
     coverage report -m
 
+Requested JSON file
+===================
+The requested json file for the project is located at the project root and
+is named `principals.json`
+
 Warning
 =======
 Although the `Active Principals Page` claims to have up to 510 Active Principals,
