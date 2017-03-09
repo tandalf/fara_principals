@@ -7,3 +7,8 @@ fara_principals/items.py
 fara_principals/middlewares.py
 fara_principals/pipelines.py
 fara_principals/settings.py
+fara_principals/core/__init__.py
+fara_principals/core/pages.py
+fara_principals/core/principals.py
+fara_principals/spiders/__init__.py
+fara_principals/spiders/active_principals_spider.py
