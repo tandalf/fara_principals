@@ -329,6 +329,7 @@ class PrincipalListPage:
 
             link = ''.join(
                 principal_table_data.xpath('.//a/@href').extract())
+            link = 'https://efile.fara.gov/pls/apex/' + link
 
             principal_name = ''.join(principal_table_data.xpath(
                 '..//td[starts-with(@headers, "FP_NAME")]/text()').\
@@ -358,10 +359,10 @@ class PrincipalListPage:
                     extract())
 
             principal_dicts.append(dict(country_page_index=country_page_index,
-                link=link, principal_name=principal_name, 
+                url=link, principal_name=principal_name, 
                 principal_reg_date=principal_reg_date, address=address, 
                 state=state, registrant=registrant, reg_number=reg_number,
-                reg_date=reg_date))
+                reg_date=reg_date, exhibit=[]))
 
         return principal_dicts
 

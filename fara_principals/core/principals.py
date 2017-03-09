@@ -122,7 +122,7 @@ class Exhibit:
         self._exhibit_dict = exhibit_dict
 
     def to_dict(self):
-        return self._exhibit_dict
+        return copy.deepcopy(self._exhibit_dict)
 
     def validate(self):
         required_exhibit_fields = [
