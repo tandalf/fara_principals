@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(
   name = 'fara_principals',
-  packages = ['fara_principals'], 
+  packages = ['fara_principals', 'fara_principals.core', 'fara_principals.spiders'], 
   version = '0.0.6',
   description = 'A web scraper designed to collect Foreign Principal' +\
       ' information from fara.gov',
