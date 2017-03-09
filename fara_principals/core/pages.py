@@ -33,7 +33,7 @@ from scrapy import Selector
 from fara_principals.core.principals import ForeignPrincipal, Exhibit
 from fara_principals.exceptions import (
     InvalidPrincipalError, PageInstanceInfoNotFoundError, PageError,
-    InvalidExhibitError
+    InvalidExhibitError, PaginationEndedError
 )
 
 #url to the first/main list page which contains the first set of paginated
@@ -214,7 +214,16 @@ class PrincipalListPage:
 
         Returns:
             dict: next page form data
+
+        Raises:
+            PaginationEndedError: if the current page contains no more
+            principals.
         """
+        if not self.partial_principals():
+            raise PaginationEndedError(
+                "the current page {} contain no more data, the next wont"\
+                .format(self.get_page_context()["page"]))
+
         form_data = copy.deepcopy(__default_next_page_form_data__)
         page_context = self.get_page_context()
 
@@ -240,7 +249,15 @@ class PrincipalListPage:
         Returns:
             str: the url of the next page to be which would be opened if
             the next button had been clicked in the browser.
+
+        Raises:
+            PaginationEndedError: if the current page contains no more
+            principals.
         """
+        if not self.partial_principals():
+            raise PaginationEndedError(
+                "the current page {} contain no more data, the next wont"\
+                .format(self.get_page_context()["page"]))
         return "https://efile.fara.gov/pls/apex/wwv_flow.show"
 
     def main_page_cookie(self):
@@ -329,6 +346,7 @@ class PrincipalListPage:
 
             link = ''.join(
                 principal_table_data.xpath('.//a/@href').extract())
+            link = 'https://efile.fara.gov/pls/apex/' + link
 
             principal_name = ''.join(principal_table_data.xpath(
                 '..//td[starts-with(@headers, "FP_NAME")]/text()').\
@@ -358,10 +376,10 @@ class PrincipalListPage:
                     extract())
 
             principal_dicts.append(dict(country_page_index=country_page_index,
-                link=link, principal_name=principal_name, 
+                url=link, principal_name=principal_name, 
                 principal_reg_date=principal_reg_date, address=address, 
                 state=state, registrant=registrant, reg_number=reg_number,
-                reg_date=reg_date))
+                reg_date=reg_date, exhibit=[]))
 
         return principal_dicts
 
