@@ -38,3 +38,9 @@ class PageInstanceInfoNotFoundError(PageError):
     on a page which is meant to contain those details.
     """
     pass
+
+class PaginationEndedError(PageError):
+    """
+    Raised when there is no more data on a page
+    """
+    pass
