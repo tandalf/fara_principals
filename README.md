@@ -12,6 +12,7 @@ Installation
 It is considered very good practice to setup a virtual environment before installing apps like this so, please do that. This project is targeted for python2 so please make sure at least python 2.7 is installed on your system.
 You can download or clone this repo to install the scraper. At your terminal, enter the following commands. You can litrarily copy and paste this commands at your terminal to get this working.
     
+    git clone https://github.com/tandalf/fara_principals.git
     cd fara_principals
     python setup.py install
     pip install -r requirements.txt
@@ -53,5 +54,3 @@ Extra
 Due to a tight schedule I might not find time to elaborate MORE on the project in
 areas including, but not limited to, testing, documentation, and deployment.
 However, the basics for all these have been provided. 
-
-I hope the project is well made enough to land me an offer!
